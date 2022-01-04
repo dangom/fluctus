@@ -5,7 +5,7 @@ See https://sci-hub.st/10.1002/jtsa.12053
 """
 import random
 import numpy as np
-from sklearn.base imp BaseEstimator, TransformerMixin
+
 
 def gsbb_sampler(n: int = 1000, blocksize: int = 25, period: int = 100):
     """Generalized Seasonal Block Bootstrap. Dudek et al. 2013
@@ -40,9 +40,10 @@ def gsbb_sampler(n: int = 1000, blocksize: int = 25, period: int = 100):
 def gsbb_bootstrap(data, period, blocksize=25, n_boots=1000):
     """Generate bootstrap samples according to GSBB.
     For now assumes data is 1D.
+    PERIOD IN DATA SAMPLES
     """
     samples = [
-        data[gsbb_sampler(n=data.size, blocksize=blocksize, period=period)]
+        data[gsbb_sampler(n=data.shape[0], blocksize=blocksize, period=period)]
         for i in range(n_boots)
     ]
     return np.dstack(samples)
@@ -55,7 +56,7 @@ def get_ci(bootstraps, level=95):
     return emin, emax
 
 
-def gsbb_bootstrap_ci(data, period, n_boots= 1000, level=95):
-    bootstraps = gsbb_bootstrap(data, period, n_boots=n_boots)
+def gsbb_bootstrap_ci(data, period, blocksize=25, n_boots=1000, level=95):
+    bootstraps = gsbb_bootstrap(data, period, blocksize=blocksize, n_boots=n_boots)
     cis = get_ci(bootstraps=bootstraps, level=level)
     return cis

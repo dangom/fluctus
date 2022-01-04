@@ -22,6 +22,8 @@ from scipy import interpolate
 from sklearn.base import BaseEstimator, TransformerMixin, _OneToOneFeatureMixin
 from sklearn.utils.validation import check_is_fitted
 
+from osclib.bootstrap import gsbb_bootstrap_ci
+
 
 class PSCScaler(BaseEstimator, TransformerMixin, _OneToOneFeatureMixin):
     """Percent Signal Change Scaler
@@ -247,17 +249,17 @@ class TrialAveragingTransformer(BaseEstimator, TransformerMixin):
     (each period considered to be a trial).
     Parameters
     ----------
-    n_trials: float
+    n_trials: int
         The number of trials in the signal that we want to average.
-
-    Notes
-    -----
-    This transformer is stateless (besides constructor parameters), the
-    fit method does nothing but is useful when used in a pipeline.
+    n_boots: int
+        The number of bootstraps to compute during the averaging process.
     """
 
-    def __init__(self, n_trials: int = 1):
+    def __init__(self, n_trials: int = 1, n_boots: int = 5000, ci=95, blocksize=25):
         self.n_trials = n_trials
+        self.n_boots = n_boots
+        self.ci = ci
+        self.blocksize = blocksize
 
     def fit(self, X, y=None):
         """Do nothing and return the estimator unchanged.
@@ -277,14 +279,22 @@ class TrialAveragingTransformer(BaseEstimator, TransformerMixin):
         assert (X.shape[0] / self.n_trials) % 1 < np.finfo(
             np.float32
         ).eps, "X samples (shape[0]) should be a multiple of n_trials."
+
+        period = X.shape[0] // self.n_trials
+        self.ci_low_, self.ci_high_ = gsbb_bootstrap_ci(
+            X,
+            int(period),
+            blocksize=self.blocksize,
+            n_boots=self.n_boots,
+            level=self.ci,
+        )
+        self.ci_low_ = self.transform(self.ci_low_)
+        self.ci_high_ = self.transform(self.ci_high_)
         return self
 
     def transform(self, X):
         """Splits and averages signals according to trials."""
         return np.dstack(np.split(X, self.n_trials)).mean(-1)
-
-    def _more_tags(self):
-        return {"stateless": True}
 
 
 class FFTTransformer(BaseEstimator, TransformerMixin):
