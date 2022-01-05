@@ -17,6 +17,11 @@ def gsbb_sampler(n: int = 1000, blocksize: int = 25, period: int = 100):
 
     Variables named according to the paper for simpler understanding.
     """
+    # Step 0 - sanity check
+    if n == period:
+        return list(
+            range(n)
+        )  # if there is a single period in the data, we cannot bootstrap.
     # Step 1
     # Choose a (positive) integer block size (b) < n and let l = b // n
     b = blocksize
