@@ -255,11 +255,19 @@ class TrialAveragingTransformer(BaseEstimator, TransformerMixin):
         The number of bootstraps to compute during the averaging process.
     """
 
-    def __init__(self, n_trials: int = 1, n_boots: int = 5000, ci=95, blocksize=25):
+    def __init__(
+        self,
+        n_trials: int = 1,
+        n_boots: int = 5000,
+        ci=95,
+        blocksize=25,
+        bootstrap=True,
+    ):
         self.n_trials = n_trials
         self.n_boots = n_boots
         self.ci = ci
         self.blocksize = blocksize
+        self.bootstrap = bootstrap
 
     def fit(self, X, y=None):
         """Do nothing and return the estimator unchanged.
@@ -280,16 +288,17 @@ class TrialAveragingTransformer(BaseEstimator, TransformerMixin):
             np.float32
         ).eps, "X samples (shape[0]) should be a multiple of n_trials."
 
-        period = X.shape[0] // self.n_trials
-        self.ci_low_, self.ci_high_ = gsbb_bootstrap_ci(
-            X,
-            int(period),
-            blocksize=self.blocksize,
-            n_boots=self.n_boots,
-            level=self.ci,
-        )
-        self.ci_low_ = self.transform(self.ci_low_)
-        self.ci_high_ = self.transform(self.ci_high_)
+        if self.bootstrap:
+            period = X.shape[0] // self.n_trials
+            self.ci_low_, self.ci_high_ = gsbb_bootstrap_ci(
+                X,
+                int(period),
+                blocksize=self.blocksize,
+                n_boots=self.n_boots,
+                level=self.ci,
+            )
+            self.ci_low_ = self.transform(self.ci_low_)
+            self.ci_high_ = self.transform(self.ci_high_)
         return self
 
     def transform(self, X):
