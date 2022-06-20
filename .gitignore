@@ -4,7 +4,7 @@
 .coverage
 .idea/
 .vscode/
-osclib.egg-info/
+fluctus.egg-info/
 build/
 dist/
 docs/build/

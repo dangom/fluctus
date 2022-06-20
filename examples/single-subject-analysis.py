@@ -5,7 +5,7 @@ import nibabel as nib
 import numpy as np
 import pandas as pd
 from nilearn import image, input_data
-from osclib.preprocessing import (
+from fluctus.preprocessing import (
     FeatureAverager,
     FFTTransformer,
     PeriodicGridTransformer,

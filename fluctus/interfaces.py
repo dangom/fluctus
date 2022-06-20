@@ -16,7 +16,7 @@ from scipy.signal import butter, sosfiltfilt
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import MinMaxScaler
 
-from osclib import preprocessing
+from fluctus import preprocessing
 
 
 # Helpers

@@ -1,10 +1,10 @@
 [run]
 source =
-    osclib
+    fluctus
     tests
 branch = True
 omit =
-    osclib/cli.py
+    fluctus/cli.py
 
 [report]
 exclude_lines =

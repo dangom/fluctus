@@ -7,7 +7,7 @@ from io import open
 
 from setuptools import find_packages, setup
 
-with open("osclib/__init__.py", "r") as f:
+with open("fluctus/__init__.py", "r") as f:
     for line in f:
         if line.startswith("__version__"):
             version = line.strip().split("=")[1].strip(" '\"")
@@ -21,7 +21,7 @@ with open("README.rst", "r", encoding="utf-8") as f:
 REQUIRES = ["numpy", "scipy", "matplotlib", "scikit-learn", "nilearn", "nibabel"]
 
 kwargs = {
-    "name": "osclib",
+    "name": "fluctus",
     "version": version,
     "description": "",
     "long_description": readme,
@@ -29,7 +29,7 @@ kwargs = {
     "author_email": "d.gomez@posteo.org",
     "maintainer": "Daniel Gomez",
     "maintainer_email": "d.gomez@posteo.org",
-    "url": "https://github.com/dangom/osclib",
+    "url": "https://github.com/dangom/fluctus",
     "license": "MIT/Apache-2.0",
     "classifiers": [
         "Development Status :: 4 - Beta",

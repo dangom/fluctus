@@ -1,11 +1,11 @@
-osclib
+fluctus
 ======
 
 .. contents:: **Table of Contents**
     :backlinks: none
 
 
-Osclib provides a single interface for handling oscillatory data.
+Fluctus provides a single interface for handling oscillatory data.
 This interface is the class Oscillation, which offers methods for
 normalizing samples, averaging them, interpolating them to a different grid,
 discarding initial transient timepoints and computing a frequency spectrum.
@@ -16,7 +16,7 @@ change as I learn what feels clumsy or confusing.
 
 .. code-block:: python
                 
-    from osclib.interfaces import Oscillation
+    from fluctus.interfaces import Oscillation
     osc = Oscillation(tr=1.0, period=20.0, stimulus_offset=14.0)
     # Interpolate to a 100ms grid and percent signal change normalize
     osc.interp(target_sampling_out=0.1).psc()
@@ -38,20 +38,20 @@ responses.
 Installation
 ------------
 
-osclib is distributed on `PyPI <https://pypi.org>`_ as a universal
+fluctus is distributed on `PyPI <https://pypi.org>`_ as a universal
 wheel and is available on Linux/macOS and Windows and supports
 Python 3.7+.
 
 .. code-block:: bash
 
-    $ pip install osclib
+    $ pip install fluctus
 
 The optinal WIP viz module requires ants, which is not listed as a requirement.
 
 License
 -------
 
-osclib is distributed under the terms of both
+fluctus is distributed under the terms of both
 
 - `MIT License <https://choosealicense.com/licenses/mit>`_
 - `Apache License, Version 2.0 <https://choosealicense.com/licenses/apache-2.0>`_

@@ -22,7 +22,7 @@ from scipy import interpolate
 from sklearn.base import BaseEstimator, TransformerMixin, _OneToOneFeatureMixin
 from sklearn.utils.validation import check_is_fitted
 
-from osclib.bootstrap import gsbb_bootstrap_ci
+from fluctus.bootstrap import gsbb_bootstrap_ci
 
 
 class PSCScaler(BaseEstimator, TransformerMixin, _OneToOneFeatureMixin):
