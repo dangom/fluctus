@@ -1,19 +1,15 @@
-import pandas as pd
-import numpy as np
-from symfit import parameters, variables, Fit, Model, exp
-import numpy as np
-
-
-from seaborn._statistics import KDE
 from glob import glob
-import pandas as pd
-import numpy as np
-import seaborn as sns
-from sklearn.linear_model import LinearRegression
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from scipy.stats import sem
 from pandas.api.types import CategoricalDtype
+from scipy.stats import sem
+from seaborn._statistics import KDE
+from sklearn.linear_model import LinearRegression
+from symfit import Fit, Model, exp, parameters, variables
 
 files = glob("/Users/dangom/MGH/vaso/*/amp/*.csv")
 
@@ -41,6 +37,7 @@ def prep_data(data: str):
     df["subject"] = subject_from_run_name(data)
     df["run"] = run_from_run_name(data)
     return df
+
 
 def prep_data2(data: str):
     df = pd.read_csv(data, index_col=0)
@@ -130,9 +127,14 @@ plt.ylim([0, 1])
 
 plt.savefig("/Users/dangom/MGH/vaso/ratiosplot.png", dpi=300)
 
-df["amplitude"] = df["amplitude"]  / 2 # oscillation goes up and down.
+df["amplitude"] = df["amplitude"] / 2  # oscillation goes up and down.
 g = sns.barplot(
-    data=df, y="amplitude", x="frequency", hue="ROI", edgecolor="black", alpha=0.8,
+    data=df,
+    y="amplitude",
+    x="frequency",
+    hue="ROI",
+    edgecolor="black",
+    alpha=0.8,
     hue_order=["vein", "parenchyma"],
 )
 labels = g.get_xticklabels()  # get x labels

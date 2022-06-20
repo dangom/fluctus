@@ -1,19 +1,20 @@
-from osclib.transformers import (
+import os
+
+import matplotlib.pyplot as plt
+import nibabel as nib
+import numpy as np
+import pandas as pd
+from nilearn import image, input_data
+from osclib.preprocessing import (
+    FeatureAverager,
+    FFTTransformer,
     PeriodicGridTransformer,
     PSCScaler,
-    FFTTransformer,
-    FeatureAverager,
     TrialAveragingTransformer,
 )
-from nilearn import image, input_data
-import numpy as np
-from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
-import os
-import pandas as pd
-import nibabel as nib
 
 period = 10
 stimulus_offset = 14

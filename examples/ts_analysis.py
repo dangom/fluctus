@@ -1,20 +1,16 @@
-import pandas as pd
-import numpy as np
-from symfit import parameters, variables, Fit, Model, exp
-import numpy as np
 import re
-
-
-from seaborn._statistics import KDE
 from glob import glob
-import pandas as pd
-import numpy as np
-import seaborn as sns
-from sklearn.linear_model import LinearRegression
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from scipy.stats import sem
 from pandas.api.types import CategoricalDtype
+from scipy.stats import sem
+from seaborn._statistics import KDE
+from sklearn.linear_model import LinearRegression
+from symfit import Fit, Model, exp, parameters, variables
 
 files = glob("/Users/dangom/MGH/vaso/*/px/*osc.csv")
 
@@ -62,3 +58,4 @@ def prep_data2(data: str):
 
 df = pd.concat([prep_data2(f) for f in files])
 df["frequency"] = df["frequency"].astype(float)
+

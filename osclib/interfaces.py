@@ -8,7 +8,7 @@ By chaining transforms, one can easily generate any analysis of interest.
 from typing import Optional
 from dataclasses import dataclass
 import numpy as np
-from osclib import transformers
+from osclib import preprocessing
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import MinMaxScaler
 from scipy.signal import sosfiltfilt, butter
@@ -39,6 +39,7 @@ class Oscillation:
     PSC normalization, and FFT.
     Also offers a method to extract the time-series of a given mask and/or label from nifti.
     """
+
     tr: float
     period: float
     data: np.array
@@ -74,7 +75,7 @@ class Oscillation:
 
     def average(self):
         if self.labels is None:
-            transformer = transformers.FeatureAverager()
+            transformer = preprocessing.FeatureAverager()
             self.ids = [""]
         else:
             label_ids = set(self.labels)
@@ -83,7 +84,7 @@ class Oscillation:
                 transforms.append(
                     (
                         id,
-                        transformers.FeatureAverager(),
+                        preprocessing.FeatureAverager(),
                         np.where(np.array(self.labels) == id)[0],
                     )
                 )
@@ -92,11 +93,11 @@ class Oscillation:
         return self._transform(transformer, "Label Average")
 
     def psc(self):
-        transformer = transformers.PSCScaler()
+        transformer = preprocessing.PSCScaler()
         return self._transform(transformer, "PSC")
 
     def trial_average(self, bootstrap: bool = False):
-        transformer = transformers.TrialAveragingTransformer(
+        transformer = preprocessing.TrialAveragingTransformer(
             n_trials=self.n_trials, bootstrap=bootstrap
         )
         transformed = self._transform(transformer, "Trial Average")
@@ -106,7 +107,7 @@ class Oscillation:
         return transformed
 
     def interp(self, target_sampling_out: float = 0.1):
-        transformer = transformers.PeriodicGridTransformer(
+        transformer = preprocessing.PeriodicGridTransformer(
             period=self.period,
             sampling_in=self.tr,
             target_sampling_out=target_sampling_out,
@@ -117,7 +118,7 @@ class Oscillation:
         return transformed
 
     def fft(self):
-        transformer = transformers.FFTTransformer(self.sampling_rate)
+        transformer = preprocessing.FFTTransformer(self.sampling_rate)
         return self._transform(transformer, "FFT")
 
     def preprocess(self):
@@ -185,6 +186,11 @@ class Oscillation:
 
         if len(self.ids) > 1:
             ax.legend()
+
+        return fig, ax
+
+
+## Below are some helper functions to build the confidence index from Regan.
 
 
 def moving_average(a, n=3):
