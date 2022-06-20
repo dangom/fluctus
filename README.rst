@@ -16,6 +16,9 @@ normalizing samples, averaging them, interpolating them to a different grid,
 discarding initial transient timepoints and computing a frequency spectrum.
 It also offers methods for estimating phase and amplitude, and plotting the data.
 
+Usage
+-----
+
 This package is WIP and the interface and calling conventions are expected to
 change as I learn what feels clumsy or confusing.
 
