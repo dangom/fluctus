@@ -1,5 +1,10 @@
-fluctus
-======
+.. raw:: html
+
+         <h1 align="center">Fluctus</h1>
+         <p align="center">
+         <img width="256px" src="img/fluctus.png" alt="Banner">
+         </p>
+
 
 .. contents:: **Table of Contents**
     :backlinks: none
