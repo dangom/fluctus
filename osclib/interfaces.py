@@ -5,16 +5,19 @@ time-series, and we provide objects for conveniently manipulating them.
 
 By chaining transforms, one can easily generate any analysis of interest.
 """
-from typing import Optional
 from dataclasses import dataclass
+from typing import Optional
+
+import matplotlib.pyplot as plt
+import nibabel as nib
 import numpy as np
-from osclib import preprocessing
+from nilearn.input_data import NiftiMasker
+from scipy.signal import butter, sosfiltfilt
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import MinMaxScaler
-from scipy.signal import sosfiltfilt, butter
-import nibabel as nib
-from nilearn.input_data import NiftiMasker
-import matplotlib.pyplot as plt
+
+from osclib import preprocessing
+
 
 # Helpers
 def get_ntrials(start_offset, period, tr, nvols):

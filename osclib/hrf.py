@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+
 import numpy as np
 from scipy.stats import gamma
+
 
 @dataclass
 class DoubleGammaHRF:
