@@ -107,7 +107,7 @@ labels = [
     "vein" if x in ind[-n_vessels:] else "parenchyma" for x in range(activation.size)
 ]
 dfa = pd.DataFrame(zip(labels, amplitudes), columns=["ROI", "amplitude"])
-dfa["frequency"] = 1/period
+dfa["frequency"] = 1 / period
 dfa.to_csv()
 
 col_trans = ColumnTransformer(
