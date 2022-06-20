@@ -1,17 +1,19 @@
-[metadata]
+[project]
 name = 'osclib'
 version = '0.0.1'
 description = 'Interface for handling oscillatory data'
 author = 'Daniel Gomez'
+requires-python = ">=3.7"
 author_email = 'd.gomez@posteo.org'
-license = 'MIT/Apache-2.0'
+license = "Apache-2.0 OR MIT"
 url = 'https://github.com/dangom/osclib'
 
 [requires]
 python_version = ['3.7', '3.8', '3.9', '3.10', 'pypy', 'pypy3']
 
 [build-system]
-requires = ['setuptools', 'wheel']
+requires = ['setuptools', 'wheel', 'hatchling']
+build-backend = "hatchling.build"
 
 [tool.hatch.commands]
 prerelease = 'hatch build'
