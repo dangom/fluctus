@@ -34,6 +34,11 @@ def get_offset(stimulus_offset=14, period=10):
 
 @dataclass
 class Oscillation:
+    """
+    A class to represent an oscillation and offer methods to trial-average, voxel-average,
+    PSC normalization, and FFT.
+    Also offers a method to extract the time-series of a given mask and/or label from nifti.
+    """
     tr: float
     period: float
     data: np.array
