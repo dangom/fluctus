@@ -68,3 +68,6 @@ class HRF:
         t = np.arange(0, 25, 0.001)
         hrf = self.sample(t)
         return t[np.argmax(hrf)]
+
+    def __repr__(self):
+        return f"HRF(TTP={self.ttp:.2f}, FWHM={self.fwhm:.2f})"

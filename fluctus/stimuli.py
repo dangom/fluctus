@@ -3,8 +3,8 @@ import numpy as np
 
 @dataclass
 class SinusStim:
-    start_offset: float = 0
     frequency: float = 0.2
+    start_offset: float = 0
     exponent: float = 1.0
     luminance: float = 1.0
     extra_phase: float = 0.0
