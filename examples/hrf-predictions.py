@@ -2,6 +2,7 @@ import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from fluctus.hrf import HRF
 from fluctus.interfaces import Oscillation
 from fluctus.stimuli import SinusStim
@@ -46,7 +47,7 @@ can_ir = can_hrf.IR
 tr = 0.01
 tprime = np.arange(0, 5000, tr)
 
-frequencies = np.arange(0.01, 0.4, 0.01)
+frequencies = np.arange(0.01, 0.3, 0.005)
 
 # This idx is the index from which we consider to be in a steady-state
 idx = np.abs((tprime - 2000.0)).argmin()
@@ -102,7 +103,7 @@ def place_label_on_curve(ax, label, plot, x, y, rotation=0):
         plot.get_ydata()[y],
         label,
         family="Roboto Condensed",
-        bbox=dict(facecolor="white", edgecolor="None", alpha=0.5),
+        bbox=dict(facecolor="white", edgecolor="None", alpha=0.5, boxstyle="round,pad=0"),
         color=plot.get_color(),
         ha="center",
         va="center",
@@ -121,12 +122,12 @@ def place_dots_on_curve(ax, plot, x, y):
     )
 
 
-def annotate(what, x, y, color, style):
+def annotate(ax, what, x, y, color, style):
     text = ax.annotate(
         what,
         xy=(x, y),
         xycoords="data",
-        xytext=(20, 20),
+        xytext=(30, 5),
         color=color,
         textcoords="offset points",
         ha="center",
@@ -182,52 +183,226 @@ ax.set(
 )
 
 ###############################################################################
-# Plot 2 - plot the HRF predictions
+# Plot 2 - plot the HRF predictions and the data
+df = pd.read_csv("/Users/dangom/MGH/osc/results/db.csv")
 
 
-fig, ax = plt.subplots(dpi=200)
+def plot_hrf_predictions(what, ylabel, formatter=lambda x: f"{x:.2f}", ax=None):
+    """
+    A little wrapper to generate the same plot for different measures, like amplitude, normalized_amplitude or delays.
+    The variable names may not make much sense, since this plot was originally for amplitude (amp).
+    """
+    ## Plot 2.1 -- amplitudes
+    if ax is None:
+        fig, ax = plt.subplots(dpi=200)
 
+    amp = what
 
-def amp_prediction_for(compartment: str):
-    return predictions[predictions["model"] == compartment]["norm_amplitude"]
+    def amp_prediction_for(compartment: str):
+        return predictions[predictions["model"] == compartment][amp]
 
+    # Predictions for frequencies of interest
+    freqs_of_interest = [0.05, 0.10, 0.20]
+    pred_of_interest = predictions[
+        (np.isclose(predictions["frequency"], 0.10))
+        | (np.isclose(predictions["frequency"], 0.05))
+        | (np.isclose(predictions["frequency"], 0.20))
+    ]
 
-# Predictions for frequencies of interest
-freqs_of_interest = [0.05, 0.10, 0.20]
-pred_of_interest = predictions[
-    (np.isclose(predictions["frequency"], 0.10))
-    | (np.isclose(predictions["frequency"], 0.05))
-    | (np.isclose(predictions["frequency"], 0.20))
-]
+    def pred_of_interest_for(compartment: str):
+        return pred_of_interest[pred_of_interest["model"] == compartment][amp]
 
+    (vplot,) = ax.plot(frequencies, amp_prediction_for("vein"), label="vein")
+    (pplot,) = ax.plot(
+        frequencies, amp_prediction_for("parenchyma"), label="parenchyma"
+    )
+    (cplot,) = ax.plot(frequencies, amp_prediction_for("canonical"), label="canonical")
 
-def pred_of_interest_for(compartment: str):
-    return pred_of_interest[pred_of_interest["model"] == compartment]["norm_amplitude"]
-
-
-(vplot,) = ax.plot(frequencies, amp_prediction_for("vein"), label="vein")
-(pplot,) = ax.plot(frequencies, amp_prediction_for("parenchyma"), label="parenchyma")
-(cplot,) = ax.plot(frequencies, amp_prediction_for("canonical"), label="canonical")
-
-
-for plot, compartment in zip([vplot, pplot, cplot], ["vein", "parenchyma", "canonical"]):
-    place_dots_on_curve(ax, plot, freqs_of_interest, pred_of_interest_for(compartment))
-    for i, f in enumerate((0.10, 0.20)):
-        annotate(
-            f"{pred_of_interest_for(compartment).iloc[i+1]:.2f}",
-            f,
-            pred_of_interest_for(compartment).iloc[i+1],
-            plot.get_color(),
-            "arc3,rad=0.3",
+    for plot, compartment in zip(
+        [vplot, pplot, cplot], ["vein", "parenchyma", "canonical"]
+    ):
+        place_dots_on_curve(
+            ax, plot, freqs_of_interest, pred_of_interest_for(compartment)
         )
+        continue
 
-ax.axvline(0.05, alpha=0.2, linestyle="dashed", zorder=-1, color="gray")
-ax.axvline(0.10, alpha=0.2, linestyle="dashed", zorder=-1, color="gray")
-ax.axvline(0.20, alpha=0.2, linestyle="dashed", zorder=-1, color="gray")
+        for i, f in enumerate(freqs_of_interest):
+            txt = formatter(pred_of_interest_for(compartment).iloc[i])
+            annotate(
+                ax,
+                txt,
+                f,
+                pred_of_interest_for(compartment).iloc[i],
+                plot.get_color(),
+                "arc3,rad=0.3",
+            )
+
+    # Add labels directly on the curves
+    label_location = (20, 20)
+    # place_label_on_curve(ax, "vein", vplot, *label_location, rotation=-72.5)
+    # place_label_on_curve(ax, "parenchyma", pplot, *label_location, rotation=-53.0)
+    # place_label_on_curve(ax, "canonical", cplot, *label_location, rotation=-63.0)
+
+    ax.axvline(0.05, alpha=0.2, linestyle="dashed", zorder=-1, color="gray")
+    ax.axvline(0.10, alpha=0.2, linestyle="dashed", zorder=-1, color="gray")
+    ax.axvline(0.20, alpha=0.2, linestyle="dashed", zorder=-1, color="gray")
+
+    ax.set(xlabel="Frequency [Hz]", ylabel=ylabel)
+    # ax.legend(frameon=False)
+    if ax is None:
+        return fig, ax
+    return ax
 
 
-ax.set(xlabel="Frequency [Hz]", ylabel="Amplitude normalized to 0.05 Hz")
-ax.legend(frameon=False)
+# Now plot the normalized_amplitude, the amplitude and the delays
+plot_hrf_predictions("norm_amplitude", "Amplitude normalized to 0.05 Hz")
+plot_hrf_predictions(
+    "amplitude", "Response Amplitude (% Signal Change)", formatter=lambda x: f"{x:.2f}%"
+)
+plot_hrf_predictions("delay", "Response Delay (s)", formatter=lambda x: f"{x:.2f}s")
+
+
 
 
 ###############################################################################
+
+# Figure 1. Figure has 6 plots, 2 rows and 3 columns.
+# The first row is the HRF plot, with columns:
+# 1. HRF plot 2. HRF response 3. What is amplitude and delay
+# The second row is the HRF predictions, with columns:
+# 1. amplitude 2. normalized amplitude 3. delay
+sns.set_context("paper", font_scale=0.75)
+
+fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(
+    dpi=100, nrows=2, ncols=3, figsize=(6.7, 3.8)
+)
+
+fig.suptitle("HRF models and  predictions")
+
+ax1.set_title("A. HRF models", y=0.95)
+(vplot,) = ax1.plot(t, vein_ir, label="vein")
+(pplot,) = ax1.plot(t, par_ir, label="parenchyma")
+(cplot,) = ax1.plot(t, can_ir, label="canonical")
+
+place_label_on_curve(ax1, "vein", vplot, *(600, 600), rotation=-72.5)
+place_label_on_curve(ax1, "parenchyma", pplot, *(520, 520), rotation=-59.0)
+place_label_on_curve(ax1, "canonical", cplot, *(800, 800), rotation=-65.0)
+
+# remove upper and right axes
+ax1.spines["right"].set_visible(False)
+ax1.spines["top"].set_visible(False)
+ax1.set(xlabel="Time [s]", ylabel="% Signal Change")
+
+stim = SinusStim(frequency=0.2).sample(tprime)
+ax2.set_title("B. Responses (example 0.2Hz)", y=0.95)
+ax2.plot(tprime[0:4000], vein_hrf.transform(stim, tr)[0:4000], label="vein")
+ax2.plot(tprime[0:4000], par_hrf.transform(stim, tr)[0:4000], label="parenchyma")
+ax2.plot(tprime[0:4000], can_hrf.transform(stim, tr)[0:4000], label="canonical")
+(splot,) = ax2.plot(tprime[0:4000], stim[0:4000], alpha=0.5, color="gray", linewidth=0.5, linestyle="dashed")
+place_label_on_curve(ax2, "Stimulus", splot, *(1700, 1700), rotation=0.)
+ax2.set(ylim=[0, 10], xlabel="Time [s]", ylabel="% Signal Change")
+ax2.legend(frameon=False, loc="upper center", ncol=3, fontsize=4)
+
+# remove upper and right axes
+ax2.spines["right"].set_visible(False)
+ax2.spines["top"].set_visible(False)
+
+ax3.set_title("C. Amplitude and Delay", y=0.95)
+ax3.set(ylim=[-.2, 1.2], xlabel="Time [s]")
+# remove y ticks
+ax3.yaxis.set_ticks([])
+ax3.xaxis.set_ticks([])
+wave = SinusStim(frequency=0.1).sample(tprime)[400:1400]
+t_wave = tprime[400:1400]
+(wplot,) = ax3.plot(t_wave, wave)
+(splot,) = ax3.plot(t_wave, SinusStim(frequency=0.1, start_offset=4).sample(t_wave), alpha=0.5, color="gray", linewidth=0.5, linestyle="dashed")
+place_label_on_curve(ax3, "Response", wplot, *(400, 400), rotation=-60.)
+place_label_on_curve(ax3, "Stimulus", splot, *(700, 700), rotation=-60.)
+ax3.axhline(0.5, alpha=0.2, linestyle="dashed", zorder=-1, color="gray")
+# Now plot an arrow from the peak to the mean
+ax3.arrow(
+    t_wave[np.argmax(wave)],
+    0.5,
+    0,
+    0.5,
+    length_includes_head=True,
+    head_width=0.1,
+    head_length=0.1,
+    alpha=0.8,
+    color="C0",
+)
+
+# add a text next to the arrow
+ax3.text(
+    t_wave[np.argmax(wave)] + 0.1,
+    0.6,
+    f"Amplitude",
+    ha="left",
+    va="center",
+    fontsize=4,
+    color="C0",
+)
+# despine
+ax3.spines["left"].set_visible(False)
+ax3.spines["right"].set_visible(False)
+ax3.spines["top"].set_visible(False)
+
+# Same arrow but now in x instead of y until the drought
+ax3.arrow(
+    0,
+    0,
+    t_wave[np.argmin(wave)],
+    0,
+    length_includes_head=True,
+    head_width=0.1,
+    head_length=0.1,
+    alpha=0.8,
+    color="C0",
+)
+
+# and the text
+ax3.text(
+    t_wave[np.argmin(wave)] - 0.5,
+    0,
+    f"Delay",
+    ha="right",
+    va="center",
+    fontsize=4,
+    color="C0",
+)
+
+ax3.set(xlim=[t_wave.min(), t_wave.max()])
+plot_hrf_predictions(
+    "amplitude",
+    "% Signal Change",
+    formatter=lambda x: f"{x:.2f}%",
+    ax=ax4,
+)
+plot_hrf_predictions("norm_amplitude", "", ax=ax5)
+plot_hrf_predictions(
+    "delay", "Delay (s)", formatter=lambda x: f"{x:.2f}s", ax=ax6
+)
+
+
+ax4.set_title("D. Predicted Amplitude")
+ax5.set_title("E. Predicted Normalized amplitude")
+ax6.set_title("F. Predicted Delay")
+
+# remove upper and right axes
+ax4.spines["right"].set_visible(False)
+ax4.spines["top"].set_visible(False)
+# remove upper and right axes
+ax5.spines["right"].set_visible(False)
+ax5.spines["top"].set_visible(False)
+# remove upper and right axes
+ax6.spines["right"].set_visible(False)
+ax6.spines["top"].set_visible(False)
+
+
+# Tighten the layout
+fig.tight_layout()
+fig.savefig("/Users/dangom/MGH/osc/figures/1_hrf_predictions.png", dpi=300)
+
+# TODO: add stimulus to 2nd plot. DONE
+# TODO: add frequency that is used in second plot example DONE
+# TODO: add letters to 6 panels
