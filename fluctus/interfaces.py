@@ -30,8 +30,9 @@ def get_ntrials(start_offset, period, tr, nvols):
 def get_offset(stimulus_offset=14, period=10):
     offset = stimulus_offset
     # 39.999 just so we accept 54 as valid. Python doesn't have a do while loop.
-    while offset <= (stimulus_offset + 39.999):  # 40 seconds after start of stim
-        offset += period
+    if period is not None and (stimulus_offset < 40):
+        while offset <= (stimulus_offset + 39.999):  # 40 seconds after start of stim
+            offset += period
     return offset
 
 
