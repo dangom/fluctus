@@ -127,7 +127,7 @@ class Oscillation:
 
     def preprocess(self):
         self.reset()
-        self = self.interp().psc().average().trial_average(bootstrap=True)
+        self.interp().psc().average().trial_average(bootstrap=True)
         return self.transformed_data.squeeze()
 
     @classmethod
