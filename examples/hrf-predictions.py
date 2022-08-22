@@ -56,13 +56,13 @@ frequencies = np.arange(0.01, 0.3, 0.005)
 idx = np.abs((tprime - 2000.0)).argmin()
 
 
-def response_amplitude(signal: np.array, start_idx: int):
+def response_amplitude(signal: np.ndarray, start_idx: int):
     "Get max amplitude from oscillation as peak - drought amplitude"
     cropped_signal = signal[start_idx:]
     return (cropped_signal.max() - cropped_signal.min()) / 2
 
 
-def response_delay(signal: np.array, tr: float, frequency: float):
+def response_delay(signal: np.ndarray, tr: float, frequency: float):
     "Get max amplitude from oscillation as peak - drought amplitude"
     osc = Oscillation(tr, 1 / frequency, signal.reshape(-1, 1), 0)
     return osc.interp(0.01).psc().trial_average().phase[0]

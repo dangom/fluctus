@@ -17,7 +17,7 @@ class HRF:
     second_gamma_only: bool = False
     amplitude: float = 1
 
-    def sample(self, t: np.array) -> np.array:
+    def sample(self, t: np.ndarray) -> np.ndarray:
         peak = gamma.pdf(
             t, self.peak_delay / self.peak_width, loc=0, scale=self.peak_width
         )
@@ -43,7 +43,7 @@ class HRF:
         )
         return hrf * self.amplitude
 
-    def transform(self, timeseries: np.array, tr: float =0.02) -> np.array:
+    def transform(self, timeseries: np.ndarray, tr: float =0.02) -> np.ndarray:
         sample_times = np.arange(0, 32, tr)  # Sample 30 seconds at 20ms intervals.
         convolved = np.convolve(timeseries, self.sample(sample_times))
         # The return size of the convolved signal is len(signal) + len(sample_times) +1.
@@ -51,7 +51,7 @@ class HRF:
         return convolved[: -(len(sample_times) - 1)] * tr
 
     @property
-    def IR(self) -> np.array:
+    def IR(self) -> np.ndarray:
         "Impulse Response"
         t = np.arange(0, 16, 0.01)
         return self.sample(t)
