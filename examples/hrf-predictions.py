@@ -1,3 +1,6 @@
+"""
+This is essentially the code I used to generate the plots in our paper.
+"""
 import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,14 +10,14 @@ from fluctus.hrf import HRF
 from fluctus.interfaces import Oscillation
 from fluctus.stimuli import SinusStim
 
-
+SAVE_FIGURES = True
 ###############################################################################
 ## Create the HRFs
 
 # Parameters from HRFs from Siero et al. (2011)
 vein_hrf_params = {
-    "peak_delay": 4.5,
-    "peak_width": 0.53,
+    "peak_delay": 4.3,
+    "peak_width": 0.59,
     "undershoot_delay": 7.5,
     "undershoot_width": 2.0,
     "positive_negative_ratio": 0.1,
@@ -22,8 +25,8 @@ vein_hrf_params = {
 }
 
 parenchyma_hrf_params = {
-    "peak_delay": 4.1,
-    "peak_width": 0.49,
+    "peak_delay": 3.9,
+    "peak_width": 0.55,
     "undershoot_delay": 7.5,
     "undershoot_width": 2.0,
     "positive_negative_ratio": 0.1,
@@ -33,7 +36,7 @@ parenchyma_hrf_params = {
 t = np.arange(0, 16, 0.01)
 vein_hrf = HRF(**vein_hrf_params)
 par_hrf = HRF(**parenchyma_hrf_params)
-can_hrf = HRF(amplitude=3.5)  # canonical Glover HRF
+can_hrf = HRF(amplitude=5)  # canonical Glover HRF
 
 # Get an impulse response for the HRFs
 vein_ir = vein_hrf.IR
@@ -183,8 +186,25 @@ ax.set(
 )
 
 ###############################################################################
-# Plot 2 - plot the HRF predictions and the data
-df = pd.read_csv("/Users/dangom/MGH/osc/results/db.csv")
+# Plot 2 - plot the HRF predictions
+
+def get_predictions_for_frequencies_of_interest(what, compartment):
+
+    amp = what
+
+    # Predictions for frequencies of interest
+    pred_of_interest = predictions[
+        (np.isclose(predictions["frequency"], 0.05))
+        | (np.isclose(predictions["frequency"], 0.10))
+        | (np.isclose(predictions["frequency"], 0.20))
+    ]
+
+    def pred_of_interest_for(compartment: str):
+        return pred_of_interest[pred_of_interest["model"] == compartment][amp]
+
+    res = pred_of_interest_for(compartment)
+    res.index = [0.05, 0.10, 0.20]
+    return res
 
 
 def plot_hrf_predictions(what, ylabel, formatter=lambda x: f"{x:.2f}", ax=None):
@@ -271,7 +291,7 @@ plot_hrf_predictions("delay", "Response Delay (s)", formatter=lambda x: f"{x:.2f
 # 1. HRF plot 2. HRF response 3. What is amplitude and delay
 # The second row is the HRF predictions, with columns:
 # 1. amplitude 2. normalized amplitude 3. delay
-sns.set_context("paper", font_scale=0.75)
+sns.set_context("paper", font_scale=0.8)
 
 fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(
     dpi=100, nrows=2, ncols=3, figsize=(6.7, 3.8)
@@ -279,7 +299,7 @@ fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(
 
 fig.suptitle("HRF models and  predictions")
 
-ax1.set_title("A. HRF models", y=0.95)
+ax1.set_title(r"$\bf{A.}$ HRF models", y=0.95)
 (vplot,) = ax1.plot(t, vein_ir, label="vein")
 (pplot,) = ax1.plot(t, par_ir, label="parenchyma")
 (cplot,) = ax1.plot(t, can_ir, label="canonical")
@@ -294,20 +314,20 @@ ax1.spines["top"].set_visible(False)
 ax1.set(xlabel="Time [s]", ylabel="% Signal Change")
 
 stim = SinusStim(frequency=0.2).sample(tprime)
-ax2.set_title("B. Responses (example 0.2Hz)", y=0.95)
+ax2.set_title(r"$\bf{B.}$ Responses (example 0.2Hz)", y=0.95)
 ax2.plot(tprime[0:4000], vein_hrf.transform(stim, tr)[0:4000], label="vein")
 ax2.plot(tprime[0:4000], par_hrf.transform(stim, tr)[0:4000], label="parenchyma")
 ax2.plot(tprime[0:4000], can_hrf.transform(stim, tr)[0:4000], label="canonical")
 (splot,) = ax2.plot(tprime[0:4000], stim[0:4000], alpha=0.5, color="gray", linewidth=0.5, linestyle="dashed")
 place_label_on_curve(ax2, "Stimulus", splot, *(1700, 1700), rotation=0.)
-ax2.set(ylim=[0, 10], xlabel="Time [s]", ylabel="% Signal Change")
+ax2.set(ylim=[0, 15], xlabel="Time [s]", ylabel="% Signal Change")
 ax2.legend(frameon=False, loc="upper center", ncol=3, fontsize=4)
 
 # remove upper and right axes
 ax2.spines["right"].set_visible(False)
 ax2.spines["top"].set_visible(False)
 
-ax3.set_title("C. Amplitude and Delay", y=0.95)
+ax3.set_title(r"$\bf{C.}$ Amplitude and Delay", y=0.95)
 ax3.set(ylim=[-.2, 1.2], xlabel="Time [s]")
 # remove y ticks
 ax3.yaxis.set_ticks([])
@@ -321,10 +341,10 @@ place_label_on_curve(ax3, "Stimulus", splot, *(700, 700), rotation=-60.)
 ax3.axhline(0.5, alpha=0.2, linestyle="dashed", zorder=-1, color="gray")
 # Now plot an arrow from the peak to the mean
 ax3.arrow(
-    t_wave[np.argmax(wave)],
-    0.5,
-    0,
-    0.5,
+    x=t_wave[np.argmax(wave)],
+    y=0.,
+    dx=0,
+    dy=1.,
     length_includes_head=True,
     head_width=0.1,
     head_length=0.1,
@@ -339,7 +359,7 @@ ax3.text(
     f"Amplitude",
     ha="left",
     va="center",
-    fontsize=4,
+    fontsize=6,
     color="C0",
 )
 # despine
@@ -367,7 +387,7 @@ ax3.text(
     f"Delay",
     ha="right",
     va="center",
-    fontsize=4,
+    fontsize=6,
     color="C0",
 )
 
@@ -384,9 +404,9 @@ plot_hrf_predictions(
 )
 
 
-ax4.set_title("D. Predicted Amplitude")
-ax5.set_title("E. Predicted Normalized amplitude")
-ax6.set_title("F. Predicted Delay")
+ax4.set_title(r"$\bf{D.}$ Predicted Amplitude")
+ax5.set_title(r"$\bf{E.}$ Predicted Normalized amplitude")
+ax6.set_title(r"$\bf{F.}$ Predicted Delay")
 
 # remove upper and right axes
 ax4.spines["right"].set_visible(False)
@@ -401,8 +421,34 @@ ax6.spines["top"].set_visible(False)
 
 # Tighten the layout
 fig.tight_layout()
-fig.savefig("/Users/dangom/MGH/osc/figures/1_hrf_predictions.png", dpi=300)
+if SAVE_FIGURES:
+    fig.savefig("/Users/dangom/MGH/osc/figures/1_hrf_predictions.png", dpi=300)
 
 # TODO: add stimulus to 2nd plot. DONE
 # TODO: add frequency that is used in second plot example DONE
-# TODO: add letters to 6 panels
+# TODO: add letters to 6 panels DONE
+
+
+#### Generate table with values for the three HRFs for the frequencies of interest.
+dp = get_predictions_for_frequencies_of_interest("delay", "parenchyma")
+dv = get_predictions_for_frequencies_of_interest("delay", "vein")
+dc = get_predictions_for_frequencies_of_interest("delay", "canonical")
+nap = get_predictions_for_frequencies_of_interest("norm_amplitude", "parenchyma")
+nav = get_predictions_for_frequencies_of_interest("norm_amplitude", "vein")
+nac = get_predictions_for_frequencies_of_interest("norm_amplitude", "canonical")
+ap = get_predictions_for_frequencies_of_interest("amplitude", "parenchyma")
+av = get_predictions_for_frequencies_of_interest("amplitude", "vein")
+ac = get_predictions_for_frequencies_of_interest("amplitude", "canonical")
+
+expectations = pd.DataFrame(columns=["frequency", "Model", "delay", "amplitude", "norm. amplitude"])
+expectations.loc[0] = ["0.05Hz", "parenchyma", dp.iloc[0], ap.iloc[0], nap.iloc[0]]
+expectations.loc[1] = ["0.05Hz", "vein", dv.iloc[0], av.iloc[0], nav.iloc[0]]
+expectations.loc[2] = ["0.05Hz", "canonical", dc.iloc[0], ac.iloc[0], nac.iloc[0]]
+expectations.loc[3] = ["0.10Hz", "parenchyma", dp.iloc[1], ap.iloc[1], nap.iloc[1]]
+expectations.loc[4] = ["0.10Hz", "vein", dv.iloc[1], av.iloc[1], nav.iloc[1]]
+expectations.loc[5] = ["0.10Hz", "canonical", dc.iloc[1], ac.iloc[1], nac.iloc[1]]
+expectations.loc[6] = ["0.20Hz", "parenchyma", dp.iloc[2], ap.iloc[2], nap.iloc[2]]
+expectations.loc[7] = ["0.20Hz", "vein", dv.iloc[2], av.iloc[2], nav.iloc[2]]
+expectations.loc[8] = ["0.20Hz", "canonical", dc.iloc[2], ac.iloc[2], nac.iloc[2]]
+
+expectations.to_csv("/Users/dangom/MGH/osc/expectations.csv")
