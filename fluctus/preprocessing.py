@@ -19,13 +19,13 @@ import warnings
 import numpy as np
 from scipy import interpolate
 
-from sklearn.base import BaseEstimator, TransformerMixin, _OneToOneFeatureMixin
+from sklearn.base import BaseEstimator, TransformerMixin, OneToOneFeatureMixin
 from sklearn.utils.validation import check_is_fitted
 
 from fluctus.bootstrap import gsbb_bootstrap_ci
 
 
-class PSCScaler(BaseEstimator, TransformerMixin, _OneToOneFeatureMixin):
+class PSCScaler(BaseEstimator, TransformerMixin, OneToOneFeatureMixin):
     """Percent Signal Change Scaler
     Standardize features by removing and dividing by the mean, and multiplying
     by 100.
