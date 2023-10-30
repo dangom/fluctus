@@ -218,6 +218,9 @@ class Oscillation:
         )
         return ymax - ymin
 
+    def inverse_transform(self, what):
+        return self._masker.inverse_transform(what)
+
     def plot(self, plotci: bool = True):
         fig, ax = plt.subplots(dpi=150)
         # May have to deal with multiple curves, so...
