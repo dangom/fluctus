@@ -153,6 +153,7 @@ class Oscillation:
         if bootstrap:
             self.emin, self.emax = transformer.ci_low_, transformer.ci_high_
         self.grid = self.grid[: self.transformed_data.shape[0]]
+        self.sampling_rate = self.grid[1] - self.grid[0]
         return transformed
 
     def interp(self, target_sampling_out: float = 0.1):
