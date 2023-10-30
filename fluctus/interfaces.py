@@ -14,7 +14,7 @@ import numpy as np
 from nilearn.input_data import NiftiMasker
 from scipy.signal import butter, sosfiltfilt
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from fluctus import preprocessing
 
@@ -34,6 +34,51 @@ def get_offset(stimulus_offset=14, period=10):
         while offset <= (stimulus_offset + 39.999):  # 40 seconds after start of stim
             offset += period
     return offset
+
+
+def correlate(a: np.array, b: np.array) -> np.array:
+    """Fast numpy Row-wise Corr. Coefficients
+    See benchmarks at https://stackoverflow.com/a/30143754/3568092
+    Correlates rows of first and second arrays, which may be either 1 or 2D.
+    """
+
+    # If one of the inputs is 1D we will set this to True and squeeze the final
+    # result to return a 1D vector.
+    need_squeeze: bool = False
+
+    if a.ndim == 1:
+        need_squeeze = True
+        a = a[np.newaxis, :]
+
+    if b.ndim == 1:
+        need_squeeze = True
+        b = b[np.newaxis, :]
+
+    # Center vectors by subtracting row mean.
+    a_centered: np.array = a - a.mean(axis=1)[:, None]
+    b_centered: np.array = b - b.mean(axis=1)[:, None]
+
+    # Sum of squares across rows.
+    a_sos: np.array = (a_centered ** 2).sum(axis=1)
+    b_sos: np.array = (b_centered ** 2).sum(axis=1)
+
+    norm_factors: np.array = np.sqrt(np.dot(a_sos[:, None], b_sos[None]))
+    corr = np.dot(a_centered, b_centered.T) / norm_factors
+
+    return corr if not need_squeeze else corr.squeeze()
+
+
+def scale(x):
+    return StandardScaler().fit_transform(x.reshape(-1, 1)).ravel()
+
+
+def find_delay(arr, reference, maxshift=10, tr=0.1):
+    a_scaled = StandardScaler().fit_transform(arr)
+    b_scaled = scale(reference)
+    corrs = np.array([correlate(a_scaled.T, np.roll(b_scaled, -x)) for x in range(-maxshift, maxshift)])
+    print(corrs.shape)
+    delay = np.array(list(range(-maxshift, maxshift)))[np.argmax(corrs, 0)]
+    return  - (delay * tr)  # invert because we want delay in arr wrt to ref, not the other way around
 
 
 @dataclass
@@ -152,6 +197,13 @@ class Oscillation:
     @property
     def phase(self):
         return self.grid[self.transformed_data.argmin(0)]
+
+    def get_crosscorr(self, reference: Optional[np.array]):
+        if reference is None:
+            reference = self.transformed_data.mean(1)
+        grid_tr = (self.grid[1] - self.grid[0])
+        # Return delay in up to +- 5 seconds
+        return find_delay(self.transformed_data, reference, maxshift=int(5 / grid_tr) , tr=grid_tr)
 
     @property
     def amplitude(self):
