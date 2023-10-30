@@ -170,7 +170,11 @@ class Oscillation:
 
     def fft(self):
         transformer = preprocessing.FFTTransformer(self.sampling_rate)
-        return self._transform(transformer, "FFT")
+        transformed =  self._transform(transformer, "FFT")
+        # This grid now in Hz
+        self.grid = transformer.freqs_
+        self.sampling_rate = self.grid[1] - self.grid[0]
+        return transformed
 
     def preprocess(self):
         self.reset()
