@@ -164,6 +164,7 @@ class Oscillation:
         )
         transformed = self._transform(transformer, "Crop and Interpolate")
         self.grid = transformer.target_grid_ - self.offset
+        self.sampling_rate = self.grid[1] - self.grid[0]
         return transformed
 
     def fft(self):
