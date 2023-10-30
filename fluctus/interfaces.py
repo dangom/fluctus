@@ -6,7 +6,7 @@ time-series, and we provide objects for conveniently manipulating them.
 By chaining transforms, one can easily generate any analysis of interest.
 """
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import nibabel as nib
@@ -177,7 +177,8 @@ class Oscillation:
 
     @classmethod
     def from_nifti(
-        cls, mask: str, data: str, period: float, labels=None, stimulus_offset=14
+        cls, mask: Union[str, nib.nifti1.Nifti1Image],
+            data: str, period: float, labels=None, stimulus_offset=14
     ):
         masker = NiftiMasker(mask_img=mask, verbose=True)
         dat = nib.load(data)
