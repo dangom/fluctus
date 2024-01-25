@@ -11,10 +11,10 @@ from typing import Optional, Union
 import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
-from nilearn.input_data import NiftiMasker
+from nilearn.input_data import NiftiMasker, NiftiLabelsMasker
 from scipy.signal import butter, sosfiltfilt
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 
 from fluctus import preprocessing
 
@@ -27,10 +27,13 @@ def get_ntrials(start_offset, period, tr, nvols):
     return trials
 
 
-def get_offset(stimulus_offset=14, period=10):
+def get_offset(stimulus_offset=14, period=10, discard_transients=True):
+    # Discard transients is a toggle that automatically adds 40 seconds to the
+    # offset to account for non steady-state effects of continuous stimulation.
+    # TODO remove this toggle and have callers add it automatically.
     offset = stimulus_offset
     # 39.999 just so we accept 54 as valid. Python doesn't have a do while loop.
-    if period is not None and (stimulus_offset < 40):
+    if period is not None and (stimulus_offset < 40) and discard_transients:
         while offset <= (stimulus_offset + 39.999):  # 40 seconds after start of stim
             offset += period
     return offset
@@ -72,11 +75,11 @@ def scale(x):
     return StandardScaler().fit_transform(x.reshape(-1, 1)).ravel()
 
 
-def find_delay(arr, reference, maxshift=10, tr=0.1):
+def find_delay(arr, reference, maxshift=10, tr=0.1, scaleref:bool=True, rect_data:bool =False):
     a_scaled = StandardScaler().fit_transform(arr)
-    b_scaled = scale(reference)
+    a_scaled = a_scaled * (a_scaled > 0) if rect_data else a_scaled
+    b_scaled = reference if not scaleref else scale(reference)
     corrs = np.array([correlate(a_scaled.T, np.roll(b_scaled, -x)) for x in range(-maxshift, maxshift)])
-    print(corrs.shape)
     delay = np.array(list(range(-maxshift, maxshift)))[np.argmax(corrs, 0)]
     return  - (delay * tr)  # invert because we want delay in arr wrt to ref, not the other way around
 
@@ -94,13 +97,14 @@ class Oscillation:
     data: np.array
     stimulus_offset: float = 14
     labels: Optional[list] = None
+    discard_transients: bool = True
 
     def __post_init__(self):
         self.transformed_data = self.data
         self.transformation_chain = []
         self.sampling_rate = self.tr
         self.grid = np.arange(self.data.shape[0]) * self.sampling_rate
-        self.offset = get_offset(self.stimulus_offset, self.period)
+        self.offset = get_offset(self.stimulus_offset, self.period, self.discard_transients)
         self.n_trials = get_ntrials(
             self.offset, self.period, self.tr, self.data.shape[0]
         )
@@ -142,6 +146,9 @@ class Oscillation:
         return self._transform(transformer, "Label Average")
 
     def psc(self):
+        # Never PSC twice, because that would mess up amplitudes.
+        if "PSC" in self.transformation_chain:
+            return self
         transformer = preprocessing.PSCScaler()
         return self._transform(transformer, "PSC")
 
@@ -184,10 +191,14 @@ class Oscillation:
     @classmethod
     def from_nifti(
         cls, mask: Union[str, nib.nifti1.Nifti1Image],
-            data: str, period: float, labels=None, stimulus_offset=14
+            data: Union[str, nib.nifti1.Nifti1Image], period: float, labels=None, stimulus_offset=14, discard_transients=True
     ):
-        masker = NiftiMasker(mask_img=mask, verbose=True)
-        dat = nib.load(data)
+        masker = NiftiMasker(mask_img=mask, verbose=False)
+        # If data is str:
+        if isinstance(data, str):
+            dat = nib.load(data)
+        else:
+            dat = data
         ts = masker.fit_transform(data)
         init = cls(
             tr=dat.header["pixdim"][4],
@@ -195,22 +206,52 @@ class Oscillation:
             data=ts,
             labels=labels,
             stimulus_offset=stimulus_offset,
+            discard_transients=discard_transients,
         )
         init._masker = masker
         init._filename = data
         init._maskname = mask
         return init
 
+
+    @classmethod
+    def from_nifti_labelled(
+        cls, mask: Union[str, nib.nifti1.Nifti1Image],
+            data: Union[str, nib.nifti1.Nifti1Image], period: float, labels=None, stimulus_offset=14, discard_transients=True
+    ):
+        masker = NiftiLabelsMasker(labels_img=mask, labels=labels)
+        # If data is str:
+        if isinstance(data, str):
+            dat = nib.load(data)
+        else:
+            dat = data
+        ts = masker.fit_transform(data)
+        init = cls(
+            tr=dat.header["pixdim"][4],
+            period=period,
+            data=ts,
+            labels=labels,
+            stimulus_offset=stimulus_offset,
+            discard_transients=discard_transients,
+        )
+        init._masker = masker
+        init._filename = data
+        init._maskname = mask
+        init.transformation_chain = ["Label Average"]
+        init.ids = labels
+        return init
+
+
     @property
     def phase(self):
         return self.grid[self.transformed_data.argmin(0)]
 
-    def get_crosscorr(self, reference: Optional[np.array]):
+    def get_crosscorr(self, reference: Optional[np.array] = None, scaleref:bool=True, rect_data:bool =False):
         if reference is None:
             reference = self.transformed_data.mean(1)
         grid_tr = (self.grid[1] - self.grid[0])
         # Return delay in up to +- 5 seconds
-        return find_delay(self.transformed_data, reference, maxshift=int(5 / grid_tr) , tr=grid_tr)
+        return find_delay(self.transformed_data, reference, maxshift=int(5 / grid_tr) , tr=grid_tr, scaleref=scaleref, rect_data=rect_data)
 
     @property
     def amplitude(self):
@@ -223,6 +264,12 @@ class Oscillation:
         )
         return ymax - ymin
 
+    @property
+    def robust_amplitude(self):
+        min_max = RobustScaler(quantile_range=(10, 90))
+        min_max.fit(self.transformed_data)
+        return min_max.scale_
+
     def inverse_transform(self, what):
         return self._masker.inverse_transform(what)
 
@@ -232,7 +279,7 @@ class Oscillation:
         for i, label in enumerate(self.ids):
             ax.plot(
                 self.grid[: self.transformed_data.size],
-                self.transformed_data[:, i],
+                self.transformed_data[:, i].mean(1),
                 label=label,
             )
             if self.emin is not None and plotci:
