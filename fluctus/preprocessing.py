@@ -18,6 +18,7 @@ import warnings
 
 import numpy as np
 from scipy import interpolate
+from scipy.signal import butter, sosfiltfilt
 
 from sklearn.base import BaseEstimator, TransformerMixin, OneToOneFeatureMixin
 from sklearn.utils.validation import check_is_fitted
@@ -304,6 +305,50 @@ class TrialAveragingTransformer(BaseEstimator, TransformerMixin):
     def transform(self, X):
         """Splits and averages signals according to trials."""
         return np.dstack(np.split(X, self.n_trials)).mean(-1)
+
+
+class ButterworthBandPassTransformer(BaseEstimator, TransformerMixin):
+    """
+    This transformer applies a bandpass filter to the input signal.
+    Make sure that the frequencies are all specified in the same units.
+
+    Parameters
+    ----------
+    lowpass_cutoff: float
+        The lowpass cutoff frequency.
+    highpass_cutoff: float
+        The highpass cutoff frequency.
+    order: int
+        The order of the filter.
+    sampling_rate: float
+        The sampling rate of the signal.
+    """
+    def __init__(
+        self, lowpass_cutoff: float, highpass_cutoff: float, order: int = 5, sampling_rate: float = 1000
+    ):
+        self.highpass_cutoff = highpass_cutoff
+        self.lowpass_cutoff = lowpass_cutoff
+        self.order = order
+        self.sampling_rate = sampling_rate
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        # Calculate the filter coefficients for bandpass filtering, specifying the frequencies in Hz
+        # and using 'sos' (second-order sections) output for numerical stability
+        sos = butter(
+            self.order,
+            [self.lowpass_cutoff, self.highpass_cutoff],
+            btype='band',
+            analog=False,
+            output='sos',
+            fs=self.sampling_rate  # the sampling frequency is directly passed to the function
+        )
+
+        # Apply the filter to the data
+        filtered_X = sosfiltfilt(sos, X, axis=0)  # Apply along the axis of time samples
+        return filtered_X
 
 
 class FFTTransformer(BaseEstimator, TransformerMixin):
