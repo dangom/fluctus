@@ -278,7 +278,7 @@ class TrialAveragingTransformer(BaseEstimator, TransformerMixin):
         # Check that we can actually divide the data by the number of trials.
         assert (X.shape[0] / self.n_trials) % 1 < np.finfo(
             np.float32
-        ).eps, "X samples (shape[0]) should be a multiple of n_trials."
+        ).eps, "X samples (shape[0]) should be a multiple of n_trials. Consider cropping, padding or interpolating the signal."
 
         if self.bootstrap:
             period = X.shape[0] // self.n_trials
