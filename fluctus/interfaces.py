@@ -15,6 +15,7 @@ from nilearn.input_data import NiftiMasker, NiftiLabelsMasker
 from scipy.signal import butter, sosfiltfilt
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
+from sklearn.exceptions import NotFittedError
 
 from fluctus import preprocessing
 
@@ -122,7 +123,11 @@ class Oscillation:
         self.labels = None
 
     def _transform(self, transformer, id: str):
-        self.transformed_data = transformer.fit_transform(self.transformed_data)
+        try:
+            check_is_fitted(transformer)
+        except NotFittedError:
+            transformer.fit(self.transformed_data)
+        self.transformed_data = transformer.transform(self.transformed_data)
         self.transformation_chain.append(id)
         return self
 
@@ -145,12 +150,31 @@ class Oscillation:
             self.ids = label_ids
         return self._transform(transformer, "Label Average")
 
-    def psc(self):
+    def psc(self, baseline_begin: float = 0., baseline_end: float = np.inf):
         # Never PSC twice, because that would mess up amplitudes.
         if "PSC" in self.transformation_chain:
             return self
         transformer = preprocessing.PSCScaler()
+        # PSC scale only on the first 10 seconds.
+        begin_vol = int(baseline_begin / self.sampling_rate)
+        try:
+            end_vol = int(baseline_end / self.sampling_rate)
+            end_vol = min(end_vol, self.transformed_data.shape[0])
+        except (ZeroDivisionError, OverflowError):
+            end_vol = self.transformed_data.shape[0]
+        transformer.fit(self.transformed_data[begin_vol: end_vol, :])
         return self._transform(transformer, "PSC")
+
+    def detrend(self, order:int = 3, keep_mean:bool = True):
+        if "Detrend" in self.transformation_chain:
+            return self
+        transformer = preprocessing.Detrender(order)
+        if keep_mean:
+            mean = self.transformed_data.mean(0)
+        transformed =  self._transform(transformer, "Detrend")
+        if keep_mean:
+            self.transformed_data += mean
+        return transformed
 
     def trial_average(self, bootstrap: bool = False):
         transformer = preprocessing.TrialAveragingTransformer(
@@ -185,7 +209,7 @@ class Oscillation:
 
     def preprocess(self):
         self.reset()
-        self.interp().psc().average().trial_average(bootstrap=True)
+        self.interp().psc(0, np.inf).average().trial_average(bootstrap=True)
         return self.transformed_data.squeeze()
 
     @classmethod
@@ -240,7 +264,6 @@ class Oscillation:
         init.transformation_chain = ["Label Average"]
         init.ids = labels
         return init
-
 
     @property
     def phase(self):
