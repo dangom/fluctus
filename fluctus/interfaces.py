@@ -92,7 +92,6 @@ class Oscillation:
     PSC normalization, and FFT.
     Also offers a method to extract the time-series of a given mask and/or label from nifti.
     """
-
     tr: float
     period: float
     data: np.array
@@ -101,7 +100,7 @@ class Oscillation:
     discard_transients: bool = True
 
     def __post_init__(self):
-        self.transformed_data = self.data
+        self.tdata = self.data
         self.transformation_chain = []
         self.sampling_rate = self.tr
         self.grid = np.arange(self.data.shape[0]) * self.sampling_rate
@@ -113,7 +112,7 @@ class Oscillation:
         self.ids = [""]
 
     def reset(self):
-        self.transformed_data = self.data
+        self.tdata = self.data
         self.transformation_chain = []
         self.sampling_rate = self.tr
         self.grid = np.arange(self.data.shape[0]) * self.sampling_rate
@@ -126,8 +125,8 @@ class Oscillation:
         try:
             check_is_fitted(transformer)
         except NotFittedError:
-            transformer.fit(self.transformed_data)
-        self.transformed_data = transformer.transform(self.transformed_data)
+            transformer.fit(self.tdata)
+        self.tdata = transformer.transform(self.tdata)
         self.transformation_chain.append(id)
         return self
 
@@ -159,10 +158,10 @@ class Oscillation:
         begin_vol = int(baseline_begin / self.sampling_rate)
         try:
             end_vol = int(baseline_end / self.sampling_rate)
-            end_vol = min(end_vol, self.transformed_data.shape[0])
+            end_vol = min(end_vol, self.tdata.shape[0])
         except (ZeroDivisionError, OverflowError):
-            end_vol = self.transformed_data.shape[0]
-        transformer.fit(self.transformed_data[begin_vol: end_vol, :])
+            end_vol = self.tdata.shape[0]
+        transformer.fit(self.tdata[begin_vol: end_vol, :])
         return self._transform(transformer, "PSC")
 
     def detrend(self, order:int = 3, keep_mean:bool = True):
@@ -170,10 +169,10 @@ class Oscillation:
             return self
         transformer = preprocessing.Detrender(order)
         if keep_mean:
-            mean = self.transformed_data.mean(0)
+            mean = self.tdata.mean(0)
         transformed =  self._transform(transformer, "Detrend")
         if keep_mean:
-            self.transformed_data += mean
+            self.tdata += mean
         return transformed
 
     def trial_average(self, bootstrap: bool = False):
@@ -183,7 +182,7 @@ class Oscillation:
         transformed = self._transform(transformer, "Trial Average")
         if bootstrap:
             self.emin, self.emax = transformer.ci_low_, transformer.ci_high_
-        self.grid = self.grid[: self.transformed_data.shape[0]]
+        self.grid = self.grid[: self.tdata.shape[0]]
         self.sampling_rate = self.grid[1] - self.grid[0]
         return transformed
 
@@ -210,7 +209,7 @@ class Oscillation:
     def preprocess(self):
         self.reset()
         self.interp().psc(0, np.inf).average().trial_average(bootstrap=True)
-        return self.transformed_data.squeeze()
+        return self.tdata.squeeze()
 
     @classmethod
     def from_nifti(
@@ -267,30 +266,35 @@ class Oscillation:
 
     @property
     def phase(self):
-        return self.grid[self.transformed_data.argmin(0)]
+        return self.grid[self.tdata.argmin(0)]
+
+    @property
+    def transformed_data(self):
+        "For backwards compatibility"
+        return self.tdata
 
     def get_crosscorr(self, reference: Optional[np.array] = None, scaleref:bool=True, rect_data:bool =False):
         if reference is None:
-            reference = self.transformed_data.mean(1)
+            reference = self.tdata.mean(1)
         grid_tr = (self.grid[1] - self.grid[0])
         # Return delay in up to +- 5 seconds
-        return find_delay(self.transformed_data, reference, maxshift=int(5 / grid_tr) , tr=grid_tr, scaleref=scaleref, rect_data=rect_data)
+        return find_delay(self.tdata, reference, maxshift=int(5 / grid_tr) , tr=grid_tr, scaleref=scaleref, rect_data=rect_data)
 
     @property
     def amplitude(self):
         min_max = MinMaxScaler()
-        min_max.fit_transform(self.transformed_data)
+        min_max.fit_transform(self.tdata)
         ymin, ymax = min_max.data_min_, min_max.data_max_
         xmin, xmax = (
-            self.grid[self.transformed_data.argmin(0)],
-            self.grid[self.transformed_data.argmax(0)],
+            self.grid[self.tdata.argmin(0)],
+            self.grid[self.tdata.argmax(0)],
         )
         return ymax - ymin
 
     @property
     def robust_amplitude(self):
         min_max = RobustScaler(quantile_range=(10, 90))
-        min_max.fit(self.transformed_data)
+        min_max.fit(self.tdata)
         return min_max.scale_
 
     def inverse_transform(self, what):
@@ -301,13 +305,13 @@ class Oscillation:
         # May have to deal with multiple curves, so...
         for i, label in enumerate(self.ids):
             ax.plot(
-                self.grid[: self.transformed_data.size],
-                self.transformed_data[:, i].mean(1),
+                self.grid[: self.tdata.size],
+                self.tdata[:, i].mean(1),
                 label=label,
             )
             if self.emin is not None and plotci:
                 ax.fill_between(
-                    self.grid[: self.transformed_data.size],
+                    self.grid[: self.tdata.size],
                     self.emin[:, i],
                     self.emax[:, i],
                     alpha=0.4,
