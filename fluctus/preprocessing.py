@@ -1,14 +1,5 @@
 """
-Functions for the following operations on fmri data
-
-mask -> extract -> interpolate -> trial average -> format -> plotting
-
-- mask :: Union[anatomical, functional]
-- extract :: extract time-series from mask
-- interpolate :: generate new grid based on frequency / period
-- trial average :: average trials
-- format to pandas :: trials, timepoints, voxels -> pandas DataFrame
-- plotting :: plotting functionality for the DataFrame based off seaborn
+SKlearn transformers for preprocessing time-series data.
 
 samples - timepoints, rows
 features - voxels, columns
@@ -440,3 +431,44 @@ class FeatureAverager(BaseEstimator, TransformerMixin):
     def transform(self, X):
         """Averages input features (columns) and returns them as a 2D array."""
         return X.mean(axis=-1)[:, np.newaxis]
+
+
+class Detrender(BaseEstimator, TransformerMixin):
+    """
+    This transformer removes trends from the input signal.
+    The trend is removed by fitting a polynomial of order `order` to the signal
+
+    Notes
+    -----
+
+    This transformer is stateful, the fit method computes the coefficients of the
+    polynomial that will be used to detrend the signals during transform.
+    This way one can use the transformer to detrend the data after estimating
+    the trend on a smaller portion of the data (such as an initial linear trend).
+    """
+    def __init__(self, order: int = 1):
+        self.order = order
+
+    def fit(self, X, y=None):
+        samples = np.arange(X.shape[0])  # timepoints, rows
+        vandermonde_matrix = np.vander(samples, N=self.order + 1)
+        coefficients, residuals, rank, s = np.linalg.lstsq(vandermonde_matrix, X, rcond=None)
+        self.coefficients_ = coefficients
+        return self
+
+    def transform(self, X):
+        """Remove linear trends from the input signal."""
+        check_is_fitted(self)
+        samples = np.arange(X.shape[0])  # timepoints, rows
+        vandermonde_matrix = np.vander(samples, N=self.order + 1)
+        trend = (vandermonde_matrix @ self.coefficients_)
+        detrended = X - trend
+        return detrended
+
+    def inverse_transform(self, X):
+        """Add back the trend to the detrended signal."""
+        check_is_fitted(self)
+        samples = np.arange(X.shape[0])
+        vandermonde_matrix = np.vander(samples, N=self.order + 1)
+        trend = (vandermonde_matrix @ self.coefficients_)
+        return X + trend
