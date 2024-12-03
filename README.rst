@@ -25,7 +25,8 @@ change as I learn what feels clumsy or confusing.
 .. code-block:: python
                 
     from fluctus.interfaces import Oscillation
-    osc = Oscillation(tr=1.0, period=20.0, stimulus_offset=14.0)
+    # Assume data is a numpy array of shape (samples (timepoints) x features (signals))
+    osc = Oscillation(data=data, tr=1.0, period=20.0, stimulus_offset=14.0)
     # Interpolate to a 100ms grid and percent signal change normalize
     osc.interp(target_sampling_out=0.1).psc()
     # See all operations that were done to the data
@@ -33,7 +34,7 @@ change as I learn what feels clumsy or confusing.
     # Get the transformed data
     osc_preproc = osc.transformed_data
 
-Since my use case is dealing with neuroimaging data, it also provides methods
+Since my use case is dealing with neuroimaging data, it also provides wrappers
 for reading data from nifti files given a mask.
 
 .. code-block:: python
