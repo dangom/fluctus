@@ -16,6 +16,7 @@ from scipy.signal import butter, sosfiltfilt
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 from sklearn.exceptions import NotFittedError
+from sklearn.utils.validation import check_is_fitted
 
 from fluctus import preprocessing
 
