@@ -11,7 +11,7 @@ from typing import Optional, Union
 import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
-from nilearn.input_data import NiftiMasker, NiftiLabelsMasker
+from nilearn.maskers import NiftiMasker, NiftiLabelsMasker
 from scipy.signal import butter, sosfiltfilt
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
